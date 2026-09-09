@@ -1,8 +1,8 @@
 <?php
 
 use App\Events\CanvasUpdated;
-use App\Events\ChatMessageSent;
-use App\Events\CursorMoved;
+use App\Events\ChatMessageEvent;
+use App\Events\CursorMovedEvent;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Cache;
@@ -53,7 +53,11 @@ Route::get('/room/{roomId}', function ($roomId) {
     ]);
 
     $savedCanvas = Cache::get('canvas_room_' . $roomId, null);
-    return view('canvas', compact('roomId', 'savedCanvas', 'roomInfo'));
+
+    // Otomatis mendeteksi file room.blade.php atau canvas.blade.php agar tidak Error 500
+    $viewName = view()->exists('room') ? 'room' : 'canvas';
+
+    return view($viewName, compact('roomId', 'savedCanvas', 'roomInfo'));
 });
 
 // 4. Verification Password untuk Private Room
@@ -78,17 +82,10 @@ Route::post('/room/{roomId}/broadcast', function (Request $request, $roomId) {
 
 // 6. Broadcast Chat Realtime
 Route::post('/room/{id}/chat', function ($id, Request $request) {
-    $username = $request->input('username', 'Anonim');
+    $username = $request->input('username') ?: 'Anonim';
     $message = $request->input('message', '');
 
-    // Pastikan data yang di-broadcast mengirimkan kunci 'username' dan 'message'
-    broadcast(new \App\Events\ChatMessageEvent($id, $username, $message))->toOthers();
-    
-    // Atau jika menggunakan SDK Pusher langsung:
-    // $pusher->trigger('canvas-room.' . $id, 'chat.sent', [
-    //     'username' => $username,
-    //     'message' => $message,
-    // ]);
+    broadcast(new ChatMessageEvent($id, $username, $message))->toOthers();
 
     return response()->json(['status' => 'success']);
 });
@@ -96,14 +93,14 @@ Route::post('/room/{id}/chat', function ($id, Request $request) {
 // 7. Broadcast Cursor Realtime
 Route::post('/room/{id}/cursor', function ($id, Request $request) {
     $payload = [
-        'id' => $request->header('X-Socket-ID'),
-        'username' => $request->input('username', 'Anonim'),
+        'id' => $request->header('X-Socket-ID') ?: (string) rand(1000, 9999),
+        'username' => $request->input('username') ?: 'User',
         'color' => $request->input('color', '#e63946'),
         'pctX' => $request->input('pctX'),
         'pctY' => $request->input('pctY'),
     ];
 
-    broadcast(new \App\Events\CursorMovedEvent($id, $payload))->toOthers();
+    broadcast(new CursorMovedEvent($id, $payload))->toOthers();
 
     return response()->json(['status' => 'success']);
 });
