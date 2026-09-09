@@ -22,17 +22,28 @@ function triggerPusherDirect($channel, $event, $data, $socketId = null) {
     }
 }
 
-// Auth Endpoint untuk Private Channel Pusher Client Events
+// Endpoint Auth Private Channel untuk Pusher Client Events
 Route::post('/broadcasting/auth', function (Request $request) {
     $key = config('broadcasting.connections.pusher.key') ?: env('PUSHER_APP_KEY');
     $secret = config('broadcasting.connections.pusher.secret') ?: env('PUSHER_APP_SECRET');
     $appId = config('broadcasting.connections.pusher.app_id') ?: env('PUSHER_APP_ID');
     $cluster = config('broadcasting.connections.pusher.options.cluster') ?: env('PUSHER_APP_CLUSTER', 'ap1');
 
-    $pusher = new \Pusher\Pusher($key, $secret, $appId, ['cluster' => $cluster, 'useTLS' => true]);
-    $auth = $pusher->authorizeChannel($request->input('channel_name'), $request->input('socket_id'));
+    if (!$key || !$secret || !$appId) {
+        return response()->json(['error' => 'Kunci Pusher belum diatur'], 500);
+    }
+
+    $pusher = new \Pusher\Pusher($key, $secret, $appId, [
+        'cluster' => $cluster,
+        'useTLS' => true
+    ]);
+
+    $channelName = $request->input('channel_name');
+    $socketId = $request->input('socket_id');
+
+    $auth = $pusher->authorizeChannel($channelName, $socketId);
     
-    return response($auth);
+    return response($auth, 200)->header('Content-Type', 'application/json');
 });
 
 // 1. Lobby
@@ -95,7 +106,7 @@ Route::post('/room/{roomId}/verify-password', function (Request $request, $roomI
     return response()->json(['status' => 'success']);
 });
 
-// 5. Broadcast Canvas Base64 (Untuk simpan state di cache/room)
+// 5. Broadcast Canvas Base64 (Untuk Simpan State di Cache)
 Route::post('/room/{roomId}/broadcast', function (Request $request, $roomId) {
     $data = $request->json()->all();
     $socketId = $request->header('X-Socket-ID');
