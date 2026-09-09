@@ -420,8 +420,8 @@
             img.src = {!! $savedCanvas !!}.imgData || '';
         @endif
 
-        const PUSHER_APP_KEY = "{{ env('PUSHER_APP_KEY') }}";
-        const PUSHER_CLUSTER = "{{ env('PUSHER_APP_CLUSTER', 'ap1') }}";
+        const PUSHER_APP_KEY = "{{ config('broadcasting.connections.pusher.key') }}";
+        const PUSHER_CLUSTER = "{{ config('broadcasting.connections.pusher.options.cluster', 'ap1') }}";
         const pusher = new Pusher(PUSHER_APP_KEY, { cluster: PUSHER_CLUSTER });
 
         pusher.connection.bind('connected', function() {
