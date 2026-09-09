@@ -415,11 +415,11 @@
         const PUSHER_APP_KEY = "{{ config('broadcasting.connections.pusher.key') }}";
         const PUSHER_CLUSTER = "{{ config('broadcasting.connections.pusher.options.cluster', 'ap1') }}";
 
-        // CONFIG PUSHER AUTH DENGAN PRIVATE CHANNEL
+        // INISIALISASI OTORISASI PRIVATE CHANNEL KHUSUS PUSHER JS V8
         const pusher = new Pusher(PUSHER_APP_KEY, { 
             cluster: PUSHER_CLUSTER,
-            authEndpoint: '/broadcasting/auth',
-            auth: {
+            channelAuthorization: {
+                endpoint: '/broadcasting/auth',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 }
@@ -457,7 +457,7 @@
             ctx.restore();
         }
 
-        // TERIMA PUSHER CLIENT EVENTS SECARA INSTAN
+        // LISTEN CLIENT EVENTS
         channel.bind('client-line-drawn', function(data) {
             drawSegment(data.x0, data.y0, data.x1, data.y1, data.color, data.size, data.mode);
         });
@@ -527,7 +527,6 @@
             const coords = getCanvasCoords(e);
             const now = Date.now();
 
-            // Broadcast kursor instan via Client Events (tiap 50ms)
             if (now - lastCursorSend > 50) {
                 lastCursorSend = now;
                 channel.trigger('client-cursor-moved', {
@@ -541,10 +540,8 @@
 
             if (!isDrawing) return;
 
-            // Gambar di canvas lokal
             drawSegment(lastX, lastY, coords.x, coords.y, currentColor, currentSize, currentMode);
 
-            // KIRIM LANGSUNG VIA PUSHER CLIENT EVENTS (NOL DELAY)
             channel.trigger('client-line-drawn', {
                 x0: lastX,
                 y0: lastY,
