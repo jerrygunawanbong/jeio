@@ -422,7 +422,7 @@
 
         const channel = pusher.subscribe('canvas-room.' + roomId);
 
-        // TERIMA IMAGE SYNC UTUH (SAAT PERTAMAKALI ATAU SELESAI CORAT-CORET)
+        // TERIMA IMAGE SYNC UTUH (SAAT PERTAMAKALI / BUCKET / CLEAR)
         channel.bind('canvas.updated', function(data) {
             isSyncing = true;
             const img = new Image();
@@ -472,13 +472,14 @@
             });
         }
 
+        // AKURASI PRESISI KOORDINAT TOUCH HP & PC (DESIMAL PRESISI TINGGI)
         function getCanvasCoords(e) {
             const rect = canvas.getBoundingClientRect();
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
             return {
-                x: Math.floor((e.clientX - rect.left) * scaleX),
-                y: Math.floor((e.clientY - rect.top) * scaleY),
+                x: (e.clientX - rect.left) * scaleX,
+                y: (e.clientY - rect.top) * scaleY,
                 pctX: ((e.clientX - rect.left) / rect.width) * 100,
                 pctY: ((e.clientY - rect.top) / rect.height) * 100
             };
@@ -493,7 +494,7 @@
             lastY = coords.y;
 
             if (currentMode === 'bucket') {
-                floodFill(coords.x, coords.y, hexToRgb(currentColor));
+                floodFill(Math.floor(coords.x), Math.floor(coords.y), hexToRgb(currentColor));
                 playSound('pop');
                 saveHistory();
                 syncCanvas();
@@ -568,7 +569,7 @@
                 isDrawing = false;
                 ctx.closePath();
                 saveHistory();
-                syncCanvas();
+                // syncCanvas() sengaja dilepas biar gak saling menimpa gambar antar HP & Laptop
             }
         });
 
