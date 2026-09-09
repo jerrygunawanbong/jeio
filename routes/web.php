@@ -125,4 +125,21 @@ Route::post('/room/{id}/cursor', function ($id, Request $request) {
     triggerPusherDirect('canvas-room.' . $id, 'cursor.moved', $payload, $socketId);
 
     return response()->json(['status' => 'success']);
+
+    Route::post('/room/{id}/draw', function ($id, Request $request) {
+    $socketId = $request->header('X-Socket-ID');
+    $payload = [
+        'x0' => $request->input('x0'),
+        'y0' => $request->input('y0'),
+        'x1' => $request->input('x1'),
+        'y1' => $request->input('y1'),
+        'color' => $request->input('color'),
+        'size' => $request->input('size'),
+        'mode' => $request->input('mode')
+    ];
+
+    triggerPusherDirect('canvas-room.' . $id, 'line.drawn', $payload, $socketId);
+
+    return response()->json(['status' => 'success']);
+});
 });
