@@ -415,11 +415,11 @@
         const PUSHER_APP_KEY = "{{ config('broadcasting.connections.pusher.key') }}";
         const PUSHER_CLUSTER = "{{ config('broadcasting.connections.pusher.options.cluster', 'ap1') }}";
 
-        // INISIALISASI OTORISASI PRIVATE CHANNEL KHUSUS PUSHER JS V8
+        // MENGGUNAKAN ENDPOINT /pusher/auth KHUSUS GUEST USER
         const pusher = new Pusher(PUSHER_APP_KEY, { 
             cluster: PUSHER_CLUSTER,
             channelAuthorization: {
-                endpoint: '/broadcasting/auth',
+                endpoint: '/pusher/auth',
                 headers: {
                     'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
                 }
@@ -457,7 +457,7 @@
             ctx.restore();
         }
 
-        // LISTEN CLIENT EVENTS
+        // LISTEN PUSHER CLIENT EVENTS
         channel.bind('client-line-drawn', function(data) {
             drawSegment(data.x0, data.y0, data.x1, data.y1, data.color, data.size, data.mode);
         });
