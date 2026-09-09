@@ -77,15 +77,33 @@ Route::post('/room/{roomId}/broadcast', function (Request $request, $roomId) {
 });
 
 // 6. Broadcast Chat Realtime
-Route::post('/room/{roomId}/chat', function (Request $request, $roomId) {
-    $messageData = $request->json()->all();
-    broadcast(new ChatMessageSent($messageData, $roomId))->toOthers();
+Route::post('/room/{id}/chat', function ($id, Request $request) {
+    $username = $request->input('username', 'Anonim');
+    $message = $request->input('message', '');
+
+    // Pastikan data yang di-broadcast mengirimkan kunci 'username' dan 'message'
+    broadcast(new \App\Events\ChatMessageEvent($id, $username, $message))->toOthers();
+    
+    // Atau jika menggunakan SDK Pusher langsung:
+    // $pusher->trigger('canvas-room.' . $id, 'chat.sent', [
+    //     'username' => $username,
+    //     'message' => $message,
+    // ]);
+
     return response()->json(['status' => 'success']);
 });
 
 // 7. Broadcast Cursor Realtime
-Route::post('/room/{roomId}/cursor', function (Request $request, $roomId) {
-    $cursorData = $request->json()->all();
-    broadcast(new CursorMoved($cursorData, $roomId))->toOthers();
+Route::post('/room/{id}/cursor', function ($id, Request $request) {
+    $payload = [
+        'id' => $request->header('X-Socket-ID'),
+        'username' => $request->input('username', 'Anonim'),
+        'color' => $request->input('color', '#e63946'),
+        'pctX' => $request->input('pctX'),
+        'pctY' => $request->input('pctY'),
+    ];
+
+    broadcast(new \App\Events\CursorMovedEvent($id, $payload))->toOthers();
+
     return response()->json(['status' => 'success']);
 });
