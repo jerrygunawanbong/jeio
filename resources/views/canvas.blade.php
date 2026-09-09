@@ -168,8 +168,8 @@
         <!-- Left: Canvas Area & Controls -->
         <div class="lg:col-span-3 flex flex-col items-center gap-3 w-full">
             
-            <div id="canvasWrapper" class="neo-box rounded-3xl overflow-hidden relative w-full bg-white cursor-crosshair">
-                <canvas id="paintCanvas" width="820" height="480" class="w-full h-auto block" style="touch-action: none;"></canvas>
+            <div id="canvasWrapper" class="neo-box rounded-3xl overflow-hidden relative w-full bg-white cursor-crosshair touch-none">
+                <canvas id="paintCanvas" width="820" height="480" class="w-full h-auto block touch-none" style="touch-action: none;"></canvas>
             </div>
 
             <!-- Toolbar Minimalis -->
@@ -415,7 +415,6 @@
         const PUSHER_APP_KEY = "{{ config('broadcasting.connections.pusher.key') }}";
         const PUSHER_CLUSTER = "{{ config('broadcasting.connections.pusher.options.cluster', 'ap1') }}";
 
-        // MENGGUNAKAN ENDPOINT /pusher/auth KHUSUS GUEST USER
         const pusher = new Pusher(PUSHER_APP_KEY, { 
             cluster: PUSHER_CLUSTER,
             channelAuthorization: {
@@ -430,7 +429,6 @@
             socketId = pusher.connection.socket_id;
         });
 
-        // SUBSCRIBE KE PRIVATE CHANNEL
         const channel = pusher.subscribe('private-canvas-room.' + roomId);
 
         channel.bind('canvas.updated', function(data) {
@@ -457,7 +455,6 @@
             ctx.restore();
         }
 
-        // LISTEN PUSHER CLIENT EVENTS
         channel.bind('client-line-drawn', function(data) {
             drawSegment(data.x0, data.y0, data.x1, data.y1, data.color, data.size, data.mode);
         });
@@ -488,19 +485,37 @@
             });
         }
 
+        // PERBAIKAN PRESISI KOORDINAT TOUCH HP & CLAMPING UNTUK MENCEGAH TERPOTONG
         function getCanvasCoords(e) {
             const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            
+            let clientX = e.clientX;
+            let clientY = e.clientY;
+
+            if (e.touches && e.touches.length > 0) {
+                clientX = e.touches[0].clientX;
+                clientY = e.touches[0].clientY;
+            } else if (e.changedTouches && e.changedTouches.length > 0) {
+                clientX = e.changedTouches[0].clientX;
+                clientY = e.changedTouches[0].clientY;
+            }
 
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
 
+            const clamp = (val, min, max) => Math.max(min, Math.min(max, val));
+
+            const rawX = (clientX - rect.left) * scaleX;
+            const rawY = (clientY - rect.top) * scaleY;
+
+            const clampedX = clamp(rawX, 0, canvas.width);
+            const clampedY = clamp(rawY, 0, canvas.height);
+
             return {
-                x: (clientX - rect.left) * scaleX,
-                y: (clientY - rect.top) * scaleY,
-                pctX: ((clientX - rect.left) / rect.width) * 100,
-                pctY: ((clientY - rect.top) / rect.height) * 100
+                x: clampedX,
+                y: clampedY,
+                pctX: (clampedX / canvas.width) * 100,
+                pctY: (clampedY / canvas.height) * 100
             };
         }
 
