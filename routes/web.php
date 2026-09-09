@@ -17,10 +17,12 @@ function triggerPusherDirect($channel, $event, $data, $socketId = null) {
             'cluster' => $cluster,
             'useTLS' => true
         ]);
-        $pusher->trigger($channel, $event, $data, $socketId);
+        
+        // Bungkus socketId ke dalam array $params
+        $params = $socketId ? ['socket_id' => $socketId] : [];
+        $pusher->trigger($channel, $event, $data, $params);
     }
 }
-
 // 1. Halaman Utama Lobby
 Route::get('/', function () {
     $rooms = Cache::get('jeio_public_rooms', []);
