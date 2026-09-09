@@ -177,7 +177,7 @@
         <div class="lg:col-span-3 flex flex-col items-center gap-3 w-full">
             
             <div id="canvasWrapper" class="neo-box rounded-3xl overflow-hidden relative w-full bg-white cursor-crosshair">
-                <canvas id="paintCanvas" width="820" height="480" class="w-full h-auto block"></canvas>
+                <canvas id="paintCanvas" width="820" height="480" class="w-full h-auto block" style="touch-action: none;"></canvas>
             </div>
 
             <!-- Toolbar Minimalis Neubrutalist -->
@@ -442,7 +442,9 @@
         });
 
         channel.bind('chat.sent', function(data) {
-            appendChatMessage(data.username, data.message, false);
+            const sender = data.username || data.user || data.name || 'Anonim';
+            const msg = data.message || data.text || '';
+            appendChatMessage(sender, msg, false);
             playSound('ding');
         });
 
@@ -478,7 +480,9 @@
         }
 
         let lastCursorSend = 0;
-        canvas.addEventListener('mousemove', (e) => {
+        
+        // Menggunakan Pointer Event agar mendukung sentuhan jari HP & klik Mouse PC
+        canvas.addEventListener('pointermove', (e) => {
             const coords = getCanvasCoords(e);
             const now = Date.now();
 
@@ -512,6 +516,32 @@
             ctx.stroke();
         });
 
+        canvas.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            const coords = getCanvasCoords(e);
+
+            if (currentMode === 'bucket') {
+                floodFill(coords.x, coords.y, hexToRgb(currentColor));
+                playSound('pop');
+                saveHistory();
+                syncCanvas();
+            } else {
+                playSound('click');
+                isDrawing = true;
+                ctx.beginPath();
+                ctx.moveTo(coords.x, coords.y);
+            }
+        });
+
+        window.addEventListener('pointerup', () => {
+            if (isDrawing) {
+                isDrawing = false;
+                ctx.closePath();
+                saveHistory();
+                syncCanvas();
+            }
+        });
+
         const remoteCursors = {};
         function updateRemoteCursor(data) {
             const wrapper = document.getElementById('canvasWrapper');
@@ -540,31 +570,6 @@
             cursorEl.style.opacity = '1';
             cursorEl.timeout = setTimeout(() => { cursorEl.style.opacity = '0'; }, 3000);
         }
-
-        canvas.addEventListener('mousedown', (e) => {
-            const coords = getCanvasCoords(e);
-
-            if (currentMode === 'bucket') {
-                floodFill(coords.x, coords.y, hexToRgb(currentColor));
-                playSound('pop');
-                saveHistory();
-                syncCanvas();
-            } else {
-                playSound('click');
-                isDrawing = true;
-                ctx.beginPath();
-                ctx.moveTo(coords.x, coords.y);
-            }
-        });
-
-        window.addEventListener('mouseup', () => {
-            if (isDrawing) {
-                isDrawing = false;
-                ctx.closePath();
-                saveHistory();
-                syncCanvas();
-            }
-        });
 
         function doUndo() {
             if (historyStack.length > 1) {
@@ -818,12 +823,15 @@
         });
 
         function appendChatMessage(user, msg, isSelf) {
+            const displayUser = user || 'Anonim';
+            const displayMsg = msg || '';
+
             const msgDiv = document.createElement('div');
             msgDiv.className = isSelf 
                 ? "bg-[#bc6c25] text-white font-bold rounded-xl p-2.5 self-end ml-4 border-2 border-[#283618] shadow-[2px_2px_0px_#283618]"
                 : "bg-[#fefae0] border-2 border-[#283618] rounded-xl p-2.5 text-[#283618] font-bold self-start mr-4 shadow-[2px_2px_0px_#283618]";
 
-            msgDiv.innerHTML = `<span class="font-black ${isSelf ? 'text-[#faedcd]' : 'text-[#bc6c25]'} block text-[10px] uppercase">${user}</span><span>${msg}</span>`;
+            msgDiv.innerHTML = `<span class="font-black ${isSelf ? 'text-[#faedcd]' : 'text-[#bc6c25]'} block text-[10px] uppercase">${displayUser}</span><span>${displayMsg}</span>`;
             
             chatMessages.appendChild(msgDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
