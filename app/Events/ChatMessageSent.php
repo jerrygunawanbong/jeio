@@ -8,17 +8,19 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class ChatMessageSent implements ShouldBroadcastNow
+class ChatMessageEvent implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $messageData;
     public $roomId;
+    public $username;
+    public $message;
 
-    public function __construct($messageData, $roomId)
+    public function __construct($roomId, $username, $message)
     {
-        $this->messageData = $messageData;
         $this->roomId = $roomId;
+        $this->username = $username;
+        $this->message = $message;
     }
 
     public function broadcastOn()
