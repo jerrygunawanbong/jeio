@@ -8,17 +8,25 @@ use Illuminate\Contracts\Broadcasting\ShouldBroadcastNow;
 use Illuminate\Foundation\Events\Dispatchable;
 use Illuminate\Queue\SerializesModels;
 
-class CursorMoved implements ShouldBroadcastNow
+class CursorMovedEvent implements ShouldBroadcastNow
 {
     use Dispatchable, InteractsWithSockets, SerializesModels;
 
-    public $cursorData;
     public $roomId;
+    public $id;
+    public $username;
+    public $color;
+    public $pctX;
+    public $pctY;
 
-    public function __construct($cursorData, $roomId)
+    public function __construct($roomId, $payload)
     {
-        $this->cursorData = $cursorData;
         $this->roomId = $roomId;
+        $this->id = $payload['id'] ?? null;
+        $this->username = $payload['username'] ?? 'Anonim';
+        $this->color = $payload['color'] ?? '#e63946';
+        $this->pctX = $payload['pctX'] ?? 0;
+        $this->pctY = $payload['pctY'] ?? 0;
     }
 
     public function broadcastOn()
