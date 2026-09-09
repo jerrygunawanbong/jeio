@@ -5,7 +5,6 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Str;
 
-// Helper kirim event ke Pusher
 function triggerPusherDirect($channel, $event, $data, $socketId = null) {
     $key = config('broadcasting.connections.pusher.key') ?: env('PUSHER_APP_KEY');
     $secret = config('broadcasting.connections.pusher.secret') ?: env('PUSHER_APP_SECRET');
@@ -23,13 +22,26 @@ function triggerPusherDirect($channel, $event, $data, $socketId = null) {
     }
 }
 
-// 1. Halaman Utama Lobby
+// Auth Endpoint untuk Private Channel Pusher Client Events
+Route::post('/broadcasting/auth', function (Request $request) {
+    $key = config('broadcasting.connections.pusher.key') ?: env('PUSHER_APP_KEY');
+    $secret = config('broadcasting.connections.pusher.secret') ?: env('PUSHER_APP_SECRET');
+    $appId = config('broadcasting.connections.pusher.app_id') ?: env('PUSHER_APP_ID');
+    $cluster = config('broadcasting.connections.pusher.options.cluster') ?: env('PUSHER_APP_CLUSTER', 'ap1');
+
+    $pusher = new \Pusher\Pusher($key, $secret, $appId, ['cluster' => $cluster, 'useTLS' => true]);
+    $auth = $pusher->authorizeChannel($request->input('channel_name'), $request->input('socket_id'));
+    
+    return response($auth);
+});
+
+// 1. Lobby
 Route::get('/', function () {
     $rooms = Cache::get('jeio_public_rooms', []);
     return view('welcome', compact('rooms'));
 });
 
-// 2. Endpoint Buat Room Baru
+// 2. Buat Room
 Route::post('/create-room', function (Request $request) {
     $roomId = Str::random(8);
     $isPrivate = $request->input('is_private') === '1';
@@ -55,7 +67,7 @@ Route::post('/create-room', function (Request $request) {
     return redirect('/room/' . $roomId);
 });
 
-// 3. Halaman Canvas Room
+// 3. Canvas Room
 Route::get('/room/{roomId}', function ($roomId) {
     $roomInfo = Cache::get('room_info_' . $roomId, [
         'id' => $roomId,
@@ -71,7 +83,7 @@ Route::get('/room/{roomId}', function ($roomId) {
     return view($viewName, compact('roomId', 'savedCanvas', 'roomInfo'));
 });
 
-// 4. Verifikasi Password Room Private
+// 4. Verify Password
 Route::post('/room/{roomId}/verify-password', function (Request $request, $roomId) {
     $roomInfo = Cache::get('room_info_' . $roomId);
     $inputPassword = $request->input('password');
@@ -83,64 +95,25 @@ Route::post('/room/{roomId}/verify-password', function (Request $request, $roomI
     return response()->json(['status' => 'success']);
 });
 
-// 5. Broadcast Canvas Realtime (Base64)
+// 5. Broadcast Canvas Base64 (Untuk simpan state di cache/room)
 Route::post('/room/{roomId}/broadcast', function (Request $request, $roomId) {
     $data = $request->json()->all();
     $socketId = $request->header('X-Socket-ID');
 
     Cache::put('canvas_room_' . $roomId, json_encode($data));
-    triggerPusherDirect('canvas-room.' . $roomId, 'canvas.updated', $data, $socketId);
+    triggerPusherDirect('private-canvas-room.' . $roomId, 'canvas.updated', $data, $socketId);
 
     return response()->json(['status' => 'success']);
 });
 
-// 6. Broadcast Draw Realtime (Vektor Garis)
-Route::post('/room/{id}/draw', function ($id, Request $request) {
-    $socketId = $request->header('X-Socket-ID');
-    $payload = [
-        'x0' => $request->input('x0'),
-        'y0' => $request->input('y0'),
-        'x1' => $request->input('x1'),
-        'y1' => $request->input('y1'),
-        'color' => $request->input('color'),
-        'size' => $request->input('size'),
-        'mode' => $request->input('mode')
-    ];
-
-    triggerPusherDirect('canvas-room.' . $id, 'line.drawn', $payload, $socketId);
-
-    return response()->json(['status' => 'success']);
-});
-
-// 7. Broadcast Chat Realtime
+// 6. Broadcast Chat
 Route::post('/room/{id}/chat', function ($id, Request $request) {
     $username = $request->input('username') ?: 'Anonim';
     $message = $request->input('message', '');
     $socketId = $request->header('X-Socket-ID');
 
-    $payload = [
-        'username' => $username,
-        'message'  => $message,
-    ];
-
-    triggerPusherDirect('canvas-room.' . $id, 'chat.sent', $payload, $socketId);
-
-    return response()->json(['status' => 'success']);
-});
-
-// 8. Broadcast Cursor Realtime
-Route::post('/room/{id}/cursor', function ($id, Request $request) {
-    $socketId = $request->header('X-Socket-ID');
-
-    $payload = [
-        'id'       => $socketId ?: (string) rand(1000, 9999),
-        'username' => $request->input('username') ?: 'User',
-        'color'    => $request->input('color', '#e63946'),
-        'pctX'     => $request->input('pctX'),
-        'pctY'     => $request->input('pctY'),
-    ];
-
-    triggerPusherDirect('canvas-room.' . $id, 'cursor.moved', $payload, $socketId);
+    $payload = ['username' => $username, 'message' => $message];
+    triggerPusherDirect('private-canvas-room.' . $id, 'chat.sent', $payload, $socketId);
 
     return response()->json(['status' => 'success']);
 });
