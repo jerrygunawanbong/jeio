@@ -38,4 +38,14 @@ class CursorMovedEvent implements ShouldBroadcastNow
     {
         return 'cursor.moved';
     }
+    public function broadcastWith()
+    {
+    return [
+        'id' => $this->id,
+        'username' => $this->username,
+        'color' => $this->color,
+        'pctX' => $this->pctX,
+        'pctY' => $this->pctY,
+    ];
+    }
 }
