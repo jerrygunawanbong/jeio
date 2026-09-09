@@ -32,4 +32,11 @@ class ChatMessageEvent implements ShouldBroadcastNow
     {
         return 'chat.sent';
     }
+    public function broadcastWith()
+    {
+    return [
+        'username' => $this->username,
+        'message' => $this->message,
+    ];
+    }
 }
