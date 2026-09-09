@@ -422,7 +422,7 @@
 
         const channel = pusher.subscribe('canvas-room.' + roomId);
 
-        // TERIMA IMAGE SYNC UTUH (SAAT PERTAMAKALI / BUCKET / CLEAR)
+        // TERIMA SYNC KANVAS UTUH (KHUSUS BUCKET / CLEAR / UNDO / REDO)
         channel.bind('canvas.updated', function(data) {
             isSyncing = true;
             const img = new Image();
@@ -434,16 +434,23 @@
             img.src = data.imgData;
         });
 
-        // TERIMA KOORDINAT GARIS VEKTOR SCR INSTAN (REAL-TIME LIVE)
-        channel.bind('line.drawn', function(data) {
-            ctx.lineWidth = data.size;
+        // FUNGSI ISOLASI PENGERJAAN GARIS AGAR TIDAK MEMUTUS PATH LAIN
+        function drawSegment(x0, y0, x1, y1, color, size, mode) {
+            ctx.save();
+            ctx.beginPath();
+            ctx.moveTo(x0, y0);
+            ctx.lineTo(x1, y1);
+            ctx.lineWidth = size;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
-            ctx.strokeStyle = (data.mode === 'eraser') ? '#ffffff' : data.color;
-            ctx.beginPath();
-            ctx.moveTo(data.x0, data.y0);
-            ctx.lineTo(data.x1, data.y1);
+            ctx.strokeStyle = (mode === 'eraser') ? '#ffffff' : color;
             ctx.stroke();
+            ctx.restore();
+        }
+
+        // TERIMA KOORDINAT GARIS VEKTOR INSTAN DARI PERANGKAT LAIN
+        channel.bind('line.drawn', function(data) {
+            drawSegment(data.x0, data.y0, data.x1, data.y1, data.color, data.size, data.mode);
         });
 
         channel.bind('chat.sent', function(data) {
@@ -472,16 +479,20 @@
             });
         }
 
-        // AKURASI PRESISI KOORDINAT TOUCH HP & PC (DESIMAL PRESISI TINGGI)
+        // HITUNG KOORDINAT PRESISI SANGAT AKURAT DI HPm & PC
         function getCanvasCoords(e) {
             const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+
             const scaleX = canvas.width / rect.width;
             const scaleY = canvas.height / rect.height;
+
             return {
-                x: (e.clientX - rect.left) * scaleX,
-                y: (e.clientY - rect.top) * scaleY,
-                pctX: ((e.clientX - rect.left) / rect.width) * 100,
-                pctY: ((e.clientY - rect.top) / rect.height) * 100
+                x: (clientX - rect.left) * scaleX,
+                y: (clientY - rect.top) * scaleY,
+                pctX: ((clientX - rect.left) / rect.width) * 100,
+                pctY: ((clientY - rect.top) / rect.height) * 100
             };
         }
 
@@ -501,8 +512,6 @@
             } else {
                 playSound('click');
                 isDrawing = true;
-                ctx.beginPath();
-                ctx.moveTo(coords.x, coords.y);
             }
         });
 
@@ -532,16 +541,10 @@
 
             if (!isDrawing) return;
 
-            // Gambar di canvas lokal
-            ctx.lineWidth = currentSize;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.strokeStyle = (currentMode === 'eraser') ? '#ffffff' : currentColor;
+            // Gambar di canvas lokal secara terisolasi
+            drawSegment(lastX, lastY, coords.x, coords.y, currentColor, currentSize, currentMode);
 
-            ctx.lineTo(coords.x, coords.y);
-            ctx.stroke();
-
-            // Broadcast garis ke lawan secara real-time
+            // Broadcast garis ke perangkat lain
             fetch('/room/' + roomId + '/draw', {
                 method: 'POST',
                 headers: {
@@ -567,9 +570,7 @@
         window.addEventListener('pointerup', () => {
             if (isDrawing) {
                 isDrawing = false;
-                ctx.closePath();
                 saveHistory();
-                // syncCanvas() sengaja dilepas biar gak saling menimpa gambar antar HP & Laptop
             }
         });
 
