@@ -62,7 +62,7 @@
             position: absolute;
             pointer-events: none;
             z-index: 30;
-            transition: left 0.08s linear, top 0.08s linear;
+            transition: left 0.05s linear, top 0.05s linear;
             display: flex;
             align-items: center;
             gap: 4px;
@@ -266,7 +266,7 @@
 
             <form id="chatForm" class="flex gap-2 pt-2 border-t-2 border-[#283618]/30">
                 <input type="text" id="chatInput" placeholder="Ketik pesan..." required class="w-full bg-[#fefae0] border-2 border-[#283618] rounded-xl px-3 py-2 text-xs font-black text-[#283618] outline-none focus:bg-white">
-                <button type="submit" class="bg-[#bc6c25] text-white font-black text-xs px-4 py-2 rounded-xl neo-btn">
+                <button type="submit" class="bg-[#bc6c25] text-[#fefae0] font-black text-xs px-4 py-2 rounded-xl neo-btn">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
                 </button>
             </form>
@@ -414,15 +414,25 @@
 
         const PUSHER_APP_KEY = "{{ config('broadcasting.connections.pusher.key') }}";
         const PUSHER_CLUSTER = "{{ config('broadcasting.connections.pusher.options.cluster', 'ap1') }}";
-        const pusher = new Pusher(PUSHER_APP_KEY, { cluster: PUSHER_CLUSTER });
+
+        // CONFIG PUSHER AUTH DENGAN PRIVATE CHANNEL
+        const pusher = new Pusher(PUSHER_APP_KEY, { 
+            cluster: PUSHER_CLUSTER,
+            authEndpoint: '/broadcasting/auth',
+            auth: {
+                headers: {
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content')
+                }
+            }
+        });
 
         pusher.connection.bind('connected', function() {
             socketId = pusher.connection.socket_id;
         });
 
-        const channel = pusher.subscribe('canvas-room.' + roomId);
+        // SUBSCRIBE KE PRIVATE CHANNEL
+        const channel = pusher.subscribe('private-canvas-room.' + roomId);
 
-        // TERIMA SYNC KANVAS UTUH (KHUSUS BUCKET / CLEAR / UNDO / REDO)
         channel.bind('canvas.updated', function(data) {
             isSyncing = true;
             const img = new Image();
@@ -434,7 +444,6 @@
             img.src = data.imgData;
         });
 
-        // FUNGSI ISOLASI PENGERJAAN GARIS AGAR TIDAK MEMUTUS PATH LAIN
         function drawSegment(x0, y0, x1, y1, color, size, mode) {
             ctx.save();
             ctx.beginPath();
@@ -448,9 +457,13 @@
             ctx.restore();
         }
 
-        // TERIMA KOORDINAT GARIS VEKTOR INSTAN DARI PERANGKAT LAIN
-        channel.bind('line.drawn', function(data) {
+        // TERIMA PUSHER CLIENT EVENTS SECARA INSTAN
+        channel.bind('client-line-drawn', function(data) {
             drawSegment(data.x0, data.y0, data.x1, data.y1, data.color, data.size, data.mode);
+        });
+
+        channel.bind('client-cursor-moved', function(data) {
+            updateRemoteCursor(data);
         });
 
         channel.bind('chat.sent', function(data) {
@@ -458,10 +471,6 @@
             const msg = data.message || data.text || '';
             appendChatMessage(sender, msg, false);
             playSound('ding');
-        });
-
-        channel.bind('cursor.moved', function(data) {
-            updateRemoteCursor(data);
         });
 
         function syncCanvas() {
@@ -479,7 +488,6 @@
             });
         }
 
-        // HITUNG KOORDINAT PRESISI SANGAT AKURAT DI HPm & PC
         function getCanvasCoords(e) {
             const rect = canvas.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -519,48 +527,32 @@
             const coords = getCanvasCoords(e);
             const now = Date.now();
 
-            // Broadcast kursor per 120ms
-            if (now - lastCursorSend > 120) {
+            // Broadcast kursor instan via Client Events (tiap 50ms)
+            if (now - lastCursorSend > 50) {
                 lastCursorSend = now;
-                fetch('/room/' + roomId + '/cursor', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                        'X-Socket-ID': socketId
-                    },
-                    body: JSON.stringify({
-                        id: socketId,
-                        username: myUsername,
-                        color: myColor,
-                        pctX: coords.pctX,
-                        pctY: coords.pctY
-                    })
+                channel.trigger('client-cursor-moved', {
+                    id: socketId,
+                    username: myUsername,
+                    color: myColor,
+                    pctX: coords.pctX,
+                    pctY: coords.pctY
                 });
             }
 
             if (!isDrawing) return;
 
-            // Gambar di canvas lokal secara terisolasi
+            // Gambar di canvas lokal
             drawSegment(lastX, lastY, coords.x, coords.y, currentColor, currentSize, currentMode);
 
-            // Broadcast garis ke perangkat lain
-            fetch('/room/' + roomId + '/draw', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
-                    'X-Socket-ID': socketId
-                },
-                body: JSON.stringify({
-                    x0: lastX,
-                    y0: lastY,
-                    x1: coords.x,
-                    y1: coords.y,
-                    color: currentColor,
-                    size: currentSize,
-                    mode: currentMode
-                })
+            // KIRIM LANGSUNG VIA PUSHER CLIENT EVENTS (NOL DELAY)
+            channel.trigger('client-line-drawn', {
+                x0: lastX,
+                y0: lastY,
+                x1: coords.x,
+                y1: coords.y,
+                color: currentColor,
+                size: currentSize,
+                mode: currentMode
             });
 
             lastX = coords.x;
