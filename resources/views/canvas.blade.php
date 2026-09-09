@@ -62,7 +62,7 @@
             position: absolute;
             pointer-events: none;
             z-index: 30;
-            transition: left 0.05s linear, top 0.05s linear;
+            transition: left 0.08s linear, top 0.08s linear;
             display: flex;
             align-items: center;
             gap: 4px;
@@ -87,7 +87,7 @@
 </head>
 <body class="min-h-screen flex flex-col items-center justify-between p-3 md:p-6 select-none relative overflow-x-hidden">
 
-    <!-- Modal Tampilan Awal Setup Room & Verification Password -->
+    <!-- Modal Setup Room -->
     <div id="setupModal" class="fixed inset-0 bg-[#283618]/70 backdrop-blur-md z-50 flex items-center justify-center p-4">
         <div class="bg-[#faedcd] neo-box rounded-3xl p-6 md:p-8 w-full max-w-md relative">
             <div class="flex items-center gap-3 mb-6">
@@ -140,14 +140,6 @@
         </div>
     </div>
 
-    <!-- Ambient Doodles Background -->
-    <div class="fixed inset-0 pointer-events-none z-0 opacity-25 text-[#283618]">
-        <svg class="absolute top-6 left-8 w-16 h-16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-        <svg class="absolute top-10 right-12 w-20 h-20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 00-9.78 2.096A4.001 4.001 0 003 15z"></path></svg>
-        <svg class="absolute bottom-12 left-10 w-20 h-20" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 2L2 22h20L12 2zm0 5a1 1 0 110 2 1 1 0 010-2zm-3 6a1 1 0 110 2 1 1 0 010-2zm6 2a1 1 0 110 2 1 1 0 010-2z"></path></svg>
-        <svg class="absolute bottom-8 right-10 w-24 h-24" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 002 2h14a2 2 0 002-2V7a2 2 0 00-2-2H5zM6 9h.01M9 9h.01"></path></svg>
-    </div>
-
     <!-- Header Navbar -->
     <header class="w-full max-w-6xl flex flex-col sm:flex-row items-center justify-between gap-3 mb-4 z-10">
         <div class="flex items-center gap-3">
@@ -180,7 +172,7 @@
                 <canvas id="paintCanvas" width="820" height="480" class="w-full h-auto block" style="touch-action: none;"></canvas>
             </div>
 
-            <!-- Toolbar Minimalis Neubrutalist -->
+            <!-- Toolbar Minimalis -->
             <div class="w-full bg-[#faedcd] neo-box p-3 rounded-2xl flex flex-wrap items-center justify-between gap-3">
                 
                 <!-- Tools -->
@@ -198,33 +190,33 @@
 
                 <!-- Undo & Redo -->
                 <div class="flex items-center gap-2 border-r-2 border-[#283618]/30 pr-3">
-                    <button id="undoBtn" class="p-2.5 rounded-xl bg-white text-[#283618] neo-btn" title="Undo (Ctrl+Z)">
+                    <button id="undoBtn" class="p-2.5 rounded-xl bg-white text-[#283618] neo-btn" title="Undo">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6"></path></svg>
                     </button>
-                    <button id="redoBtn" class="p-2.5 rounded-xl bg-white text-[#283618] neo-btn" title="Redo (Ctrl+Y)">
+                    <button id="redoBtn" class="p-2.5 rounded-xl bg-white text-[#283618] neo-btn" title="Redo">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 10H11a8 8 0 00-8 8v2m18-10l-6 6m6-6l-6-6"></path></svg>
                     </button>
                 </div>
 
                 <!-- Size Slider -->
                 <div class="flex items-center gap-2 border-r-2 border-[#283618]/30 pr-3">
-                    <input type="range" id="brushSize" min="1" max="40" value="4" class="w-16 accent-[#bc6c25] cursor-pointer" title="Ukuran Kuas">
+                    <input type="range" id="brushSize" min="1" max="40" value="4" class="w-16 accent-[#bc6c25] cursor-pointer">
                     <span id="brushSizePreview" class="w-4 text-center text-xs font-black text-[#283618]">4</span>
                 </div>
 
                 <!-- Color Palette -->
                 <div class="flex items-center gap-2 flex-wrap">
-                    <button class="color-preset w-7 h-7 rounded-full bg-black border-2 border-[#283618] hover:scale-110 transition shadow-[2px_2px_0px_#283618]" data-color="#000000"></button>
-                    <button class="color-preset w-7 h-7 rounded-full bg-[#283618] border-2 border-white hover:scale-110 transition shadow-[2px_2px_0px_#283618]" data-color="#283618"></button>
-                    <button class="color-preset w-7 h-7 rounded-full bg-[#bc6c25] border-2 border-white hover:scale-110 transition shadow-[2px_2px_0px_#283618]" data-color="#bc6c25"></button>
-                    <button class="color-preset w-7 h-7 rounded-full bg-[#dda15e] border-2 border-[#283618] hover:scale-110 transition shadow-[2px_2px_0px_#283618]" data-color="#dda15e"></button>
-                    <button class="color-preset w-7 h-7 rounded-full bg-[#e63946] border-2 border-[#283618] hover:scale-110 transition shadow-[2px_2px_0px_#283618]" data-color="#e63946"></button>
-                    <button class="color-preset w-7 h-7 rounded-full bg-[#457b9d] border-2 border-[#283618] hover:scale-110 transition shadow-[2px_2px_0px_#283618]" data-color="#457b9d"></button>
-                    <button class="color-preset w-7 h-7 rounded-full bg-white border-2 border-[#283618] hover:scale-110 transition shadow-[2px_2px_0px_#283618]" data-color="#ffffff"></button>
+                    <button class="color-preset w-7 h-7 rounded-full bg-black border-2 border-[#283618]" data-color="#000000"></button>
+                    <button class="color-preset w-7 h-7 rounded-full bg-[#283618] border-2 border-white" data-color="#283618"></button>
+                    <button class="color-preset w-7 h-7 rounded-full bg-[#bc6c25] border-2 border-white" data-color="#bc6c25"></button>
+                    <button class="color-preset w-7 h-7 rounded-full bg-[#dda15e] border-2 border-[#283618]" data-color="#dda15e"></button>
+                    <button class="color-preset w-7 h-7 rounded-full bg-[#e63946] border-2 border-[#283618]" data-color="#e63946"></button>
+                    <button class="color-preset w-7 h-7 rounded-full bg-[#457b9d] border-2 border-[#283618]" data-color="#457b9d"></button>
+                    <button class="color-preset w-7 h-7 rounded-full bg-white border-2 border-[#283618]" data-color="#ffffff"></button>
                     
                     <div class="relative flex items-center justify-center border-l-2 border-[#283618]/30 pl-2">
-                        <label for="customColor" id="wheelCircleLabel" class="cursor-pointer w-7 h-7 rounded-full p-[2px] bg-gradient-to-tr from-red-500 via-green-500 to-blue-500 border-2 border-[#283618] hover:scale-110 active:scale-95 transition shadow-[2px_2px_0px_#283618] flex items-center justify-center" title="Pilih Warna Custom">
-                            <span id="wheelColorPreview" class="w-full h-full rounded-full bg-[#283618] transition-colors border border-white/40"></span>
+                        <label for="customColor" class="cursor-pointer w-7 h-7 rounded-full p-[2px] bg-gradient-to-tr from-red-500 via-green-500 to-blue-500 border-2 border-[#283618] flex items-center justify-center">
+                            <span id="wheelColorPreview" class="w-full h-full rounded-full bg-[#283618] border border-white/40"></span>
                             <input type="color" id="customColor" value="#283618" class="w-0 h-0 opacity-0 absolute">
                         </label>
                     </div>
@@ -232,10 +224,10 @@
 
                 <!-- Download & Clear -->
                 <div class="flex items-center gap-2 border-l-2 border-[#283618]/30 pl-3 ml-auto">
-                    <button id="downloadBtn" class="p-2.5 rounded-xl bg-[#283618] text-[#fefae0] neo-btn" title="Download Canvas PNG">
+                    <button id="downloadBtn" class="p-2.5 rounded-xl bg-[#283618] text-[#fefae0] neo-btn" title="Download PNG">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
                     </button>
-                    <button id="clearBtn" class="p-2.5 rounded-xl bg-rose-200 text-rose-900 neo-btn" title="Bersihkan Kanvas">
+                    <button id="clearBtn" class="p-2.5 rounded-xl bg-rose-200 text-rose-900 neo-btn" title="Clear Canvas">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
                     </button>
                 </div>
@@ -245,11 +237,11 @@
             <div class="w-full bg-[#faedcd] neo-box px-4 py-2 rounded-2xl flex items-center justify-between">
                 <span class="text-xs font-black uppercase tracking-wider text-[#283618]">Reaksi Cepat:</span>
                 <div class="flex items-center gap-3">
-                    <button class="reaction-btn text-xl hover:scale-125 active:scale-95 transition" data-emoji="🔥">🔥</button>
-                    <button class="reaction-btn text-xl hover:scale-125 active:scale-95 transition" data-emoji="😂">😂</button>
-                    <button class="reaction-btn text-xl hover:scale-125 active:scale-95 transition" data-emoji="❤️">❤️</button>
-                    <button class="reaction-btn text-xl hover:scale-125 active:scale-95 transition" data-emoji="👏">👏</button>
-                    <button class="reaction-btn text-xl hover:scale-125 active:scale-95 transition" data-emoji="💩">💩</button>
+                    <button class="reaction-btn text-xl hover:scale-125 transition" data-emoji="🔥">🔥</button>
+                    <button class="reaction-btn text-xl hover:scale-125 transition" data-emoji="😂">😂</button>
+                    <button class="reaction-btn text-xl hover:scale-125 transition" data-emoji="❤️">❤️</button>
+                    <button class="reaction-btn text-xl hover:scale-125 transition" data-emoji="👏">👏</button>
+                    <button class="reaction-btn text-xl hover:scale-125 transition" data-emoji="💩">💩</button>
                 </div>
             </div>
         </div>
@@ -353,7 +345,6 @@
             document.getElementById('customCursorPreview').style.backgroundColor = myColor;
         });
 
-        // Setup Modal Form + Validasi Password jika Private Room
         document.getElementById('setupForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             const inputName = document.getElementById('usernameInput').value.trim();
@@ -385,7 +376,6 @@
             playSound('click');
         });
 
-        // Canvas Setup
         const canvas = document.getElementById('paintCanvas');
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
@@ -452,9 +442,10 @@
             updateRemoteCursor(data);
         });
 
+        // KANVAS DIKOMPRES JADI JPEG 0.4 BIAR RESPON INSTAN & ENGGAK DELAY
         function syncCanvas() {
             if (isSyncing) return;
-            const imgData = canvas.toDataURL();
+            const imgData = canvas.toDataURL('image/jpeg', 0.4);
 
             fetch('/room/' + roomId + '/broadcast', {
                 method: 'POST',
@@ -481,12 +472,12 @@
 
         let lastCursorSend = 0;
         
-        // Menggunakan Pointer Event agar mendukung sentuhan jari HP & klik Mouse PC
+        // JEDA KURSOR DILONGGARKAN JADI 120ms AGAR SERVER TIDAK KEWALAHAN
         canvas.addEventListener('pointermove', (e) => {
             const coords = getCanvasCoords(e);
             const now = Date.now();
 
-            if (now - lastCursorSend > 40) {
+            if (now - lastCursorSend > 120) {
                 lastCursorSend = now;
                 fetch('/room/' + roomId + '/cursor', {
                     method: 'POST',
