@@ -386,6 +386,8 @@
         let currentMode = 'pencil';
         let currentColor = '#283618';
         let currentSize = 4;
+        let lastX = 0;
+        let lastY = 0;
 
         let historyStack = [];
         let redoStack = [];
@@ -420,6 +422,7 @@
 
         const channel = pusher.subscribe('canvas-room.' + roomId);
 
+        // TERIMA IMAGE SYNC UTUH (SAAT PERTAMAKALI ATAU SELESAI CORAT-CORET)
         channel.bind('canvas.updated', function(data) {
             isSyncing = true;
             const img = new Image();
@@ -429,6 +432,18 @@
                 isSyncing = false;
             };
             img.src = data.imgData;
+        });
+
+        // TERIMA KOORDINAT GARIS VEKTOR SCR INSTAN (REAL-TIME LIVE)
+        channel.bind('line.drawn', function(data) {
+            ctx.lineWidth = data.size;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.strokeStyle = (data.mode === 'eraser') ? '#ffffff' : data.color;
+            ctx.beginPath();
+            ctx.moveTo(data.x0, data.y0);
+            ctx.lineTo(data.x1, data.y1);
+            ctx.stroke();
         });
 
         channel.bind('chat.sent', function(data) {
@@ -442,7 +457,6 @@
             updateRemoteCursor(data);
         });
 
-        // KANVAS DIKOMPRES JADI JPEG 0.4 BIAR RESPON INSTAN & ENGGAK DELAY
         function syncCanvas() {
             if (isSyncing) return;
             const imgData = canvas.toDataURL('image/jpeg', 0.4);
@@ -471,12 +485,31 @@
         }
 
         let lastCursorSend = 0;
-        
-        // JEDA KURSOR DILONGGARKAN JADI 120ms AGAR SERVER TIDAK KEWALAHAN
+
+        canvas.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
+            const coords = getCanvasCoords(e);
+            lastX = coords.x;
+            lastY = coords.y;
+
+            if (currentMode === 'bucket') {
+                floodFill(coords.x, coords.y, hexToRgb(currentColor));
+                playSound('pop');
+                saveHistory();
+                syncCanvas();
+            } else {
+                playSound('click');
+                isDrawing = true;
+                ctx.beginPath();
+                ctx.moveTo(coords.x, coords.y);
+            }
+        });
+
         canvas.addEventListener('pointermove', (e) => {
             const coords = getCanvasCoords(e);
             const now = Date.now();
 
+            // Broadcast kursor per 120ms
             if (now - lastCursorSend > 120) {
                 lastCursorSend = now;
                 fetch('/room/' + roomId + '/cursor', {
@@ -498,6 +531,7 @@
 
             if (!isDrawing) return;
 
+            // Gambar di canvas lokal
             ctx.lineWidth = currentSize;
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
@@ -505,23 +539,28 @@
 
             ctx.lineTo(coords.x, coords.y);
             ctx.stroke();
-        });
 
-        canvas.addEventListener('pointerdown', (e) => {
-            e.preventDefault();
-            const coords = getCanvasCoords(e);
+            // Broadcast garis ke lawan secara real-time
+            fetch('/room/' + roomId + '/draw', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').getAttribute('content'),
+                    'X-Socket-ID': socketId
+                },
+                body: JSON.stringify({
+                    x0: lastX,
+                    y0: lastY,
+                    x1: coords.x,
+                    y1: coords.y,
+                    color: currentColor,
+                    size: currentSize,
+                    mode: currentMode
+                })
+            });
 
-            if (currentMode === 'bucket') {
-                floodFill(coords.x, coords.y, hexToRgb(currentColor));
-                playSound('pop');
-                saveHistory();
-                syncCanvas();
-            } else {
-                playSound('click');
-                isDrawing = true;
-                ctx.beginPath();
-                ctx.moveTo(coords.x, coords.y);
-            }
+            lastX = coords.x;
+            lastY = coords.y;
         });
 
         window.addEventListener('pointerup', () => {
